@@ -28,11 +28,11 @@ An honest log, added to as things break rather than written retrospectively once
 
 ## The first live run produced exactly one record, and it was a sentence about geysers
 
-**What happened.** Two ZETDC pages produced nothing. The load shedding FAQ produced one "notice": area `"Why are bills not going down despite all the shedding?"`, window 12:00 to 22:00. The source line was a paragraph explaining that a geyser "contributes about 60-70% of the total bill". The regex matched `60-70` and `% 24` wrapped it into a plausible outage window.
+**What happened.** An early text-parsing prototype, run against published utility web pages to see whether announced supply windows could be harvested as a second signal, produced one "record": area `"Why are bills not going down despite all the shedding?"`, window 12:00 to 22:00. The source line was a paragraph explaining that a geyser "contributes about 60-70% of the total bill". The regex matched `60-70` and `% 24` wrapped it into a plausible outage window.
 
 **The fix.** A validation pass between matching and accepting: a bare number range is only a time if it carries a colon, an am/pm marker, or the 4-digit HHMM form. Percentages rejected. Written hours above 23 rejected before wrapping. The real paragraph is now a regression test.
 
-**The second finding, which mattered more.** With the false positive gone the live run returned zero notices from all three sources, and link mining confirmed why: ZETDC publishes no load shedding schedule anywhere on its website. The premise the project was built on was false.
+**The second finding, which mattered more.** With the false positive gone the run returned nothing at all, from any source. There is no machine-readable supply schedule to harvest, so the announced-window idea cannot be a primary signal and the satellite measurement became the record rather than a check on someone else's record.
 
 **The lesson.** Test against the real source before building on an assumption about it. The synthetic fixture proved the parser worked. Only the live run proved there was nothing to parse.
 

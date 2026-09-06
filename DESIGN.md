@@ -8,7 +8,7 @@ Not "how bright is it" and never "is it brighter than that other place". Absolut
 
 ## Why satellite rather than utilities
 
-Utilities across Africa publish little, publish inconsistently, or publish nothing. Zimbabwe's ZETDC states in its own FAQ that load "will be done outside the programme without notice", and then publishes no programme. An accountability project built on utility disclosure inherits every gap in that disclosure.
+The requirement is a series that is comparable across borders. Utility reporting is not, and cannot be made so after the fact: definitions of an interruption differ, reporting periods differ, publication cadence differs, and coverage is uneven. A continental series assembled from national reports inherits every one of those inconsistencies, and the differences between countries in the output would mostly be differences in how each country reports.
 
 The VIIRS Day-Night Band has imaged every square kilometre of Africa every night since January 2012 at 500 m. One instrument, one calibration, no permission required, no country able to opt out. That property, not the imagery itself, is why this is the right basis for a continental record.
 

@@ -52,11 +52,11 @@ Over three years the effect is small. Over ten it would dominate. The fix is a r
 
 The current collection samples every lunation from 2022 onward. The honest threshold is not a number I get to pick after seeing the results: before any city-level claim is published, the confidence interval on its `dark_share` has to be reported alongside it, and where that interval spans the difference between cities the claim is that they cannot be distinguished.
 
-## 8. "Nobody asked for this and no utility will acknowledge it."
+## 8. "Nobody asked for this."
 
-**Probably true of the utilities, and it does not matter.** The measurement does not require cooperation, which is the entire reason it exists. A utility that improves shows up as improving; the method is not adversarial and has no view.
+**Somebody asks for it every time capital moves.** The users are site selection and expansion teams pricing standby power before committing to a location, tower and telecoms operators specifying batteries per site, cold chain operators quantifying spoilage exposure, solar and storage developers sizing systems, and lenders and insurers pricing infrastructure risk across markets. Every one of them answers this question today from anecdote or from a diesel line item somebody guessed, because no comparable series exists.
 
-On demand: the users this is built for are not utilities. They are businesses deciding where to put cold chain or manufacturing, lenders pricing infrastructure risk, researchers who currently have no comparable continental series, and journalists who can presently only report anecdote. None of them can get this anywhere else today.
+The measurement needs no cooperation from anyone, which is why it can cover every market on the same basis. It has no view: a market with improving supply shows up as improving, in exactly the same units.
 
 ## 9. "One person, no funding. This dies in three months."
 

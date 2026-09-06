@@ -17,7 +17,7 @@ from selectolax.parser import HTMLParser
 
 USER_AGENT = (
     "GridWatchZW/0.1 (+https://github.com/PeterTheDataScientist/gridwatch-zw; "
-    "public-interest research on load shedding schedule reliability)"
+    "open dataset of electricity supply patterns for operational planning)"
 )
 
 

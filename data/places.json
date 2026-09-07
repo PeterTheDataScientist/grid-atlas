@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-31",
+ "generated": "2026-09-07",
  "method": "Each city's lit footprint is derived from the 90th-percentile envelope of its own observations. dark_share is the fraction of that footprint falling below half its own normal level on a given night. Cities are never compared on absolute brightness.",
  "params": {
   "envelope_pctl": 90,

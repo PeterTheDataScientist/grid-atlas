@@ -49,11 +49,18 @@ jobs:
           else
             python - <<'PY' >> $GITHUB_OUTPUT
           from datetime import date, timedelta
+          import os
           REF, SYN = date(2000,1,6), 29.530588853
-          # Archive lags ~4 months. Look back 18 months and let extract.py skip
-          # anything already collected.
+          # Archive lags ~4 months, so nothing newer than that exists to fetch.
           end = date.today() - timedelta(days=120)
-          start = end - timedelta(days=540)
+          # If the pixel cache survived, a rolling 18 month window is enough and
+          # extract.py skips what it already holds. If the cache was evicted the
+          # store is EMPTY, and an 18 month window would rebuild a fraction of the
+          # record and then overwrite the published series with it. So a missing
+          # cache means a full rebuild from the start of the archive.
+          have_pixels = os.path.exists("pixels.npz")
+          start = (end - timedelta(days=540)) if have_pixels else date(2022, 1, 1)
+          print(f"# pixel cache present: {have_pixels}, window from {start}", flush=True)
           picks, d = [], start
           while d <= end:
               p = (((d-REF).days) % SYN)/SYN

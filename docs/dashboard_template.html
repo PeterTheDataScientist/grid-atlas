@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Atlas: night-time electricity availability for African cities</title>
+<meta name="description" content="How much of each African city's normally lit area goes dark, measured against its own history from VIIRS satellite data. Open data, CC BY.">
+<style>
+.viz-root{
+  color-scheme:light;
+  --surface-1:#fcfcfb; --plane:#f9f9f7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --s100:#cde2fb; --s250:#86b6ef; --s400:#3987e5; --s450:#2a78d6;
+  --s550:#1c5cab; --s650:#104281; --s700:#0d366b;
+  --accent:#2a78d6; --critical:#d03b3b; --good:#0ca30c;
+  --land:#eae9e3; --land-line:#d8d7cf;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])) .viz-root{
+    color-scheme:dark;
+    --surface-1:#1a1a19; --plane:#0d0d0d;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --s100:#104281; --s250:#184f95; --s400:#256abf; --s450:#2a78d6;
+    --s550:#5598e7; --s650:#86b6ef; --s700:#b7d3f6;
+    --accent:#3987e5; --critical:#d03b3b; --good:#0ca30c;
+    --land:#232322; --land-line:#33322f;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--text-primary);
+     font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 60px}
+h1{font-size:clamp(21px,4vw,29px);font-weight:600;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:15px;font-weight:600;margin:0 0 2px}
+.sub{color:var(--text-secondary);font-size:14px;margin:0}
+header{padding:26px 0 18px;border-bottom:1px solid var(--border)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:11px 12px}
+.tile b{display:block;font-size:25px;font-weight:600;line-height:1.1;margin-bottom:3px}
+.tile span{font-size:11.5px;color:var(--muted);line-height:1.25;display:block}
+
+/* map */
+svg{display:block;width:100%;height:auto;overflow:visible}
+.land{fill:var(--land);stroke:var(--land-line);stroke-width:.35}
+.bub{cursor:pointer;stroke:var(--surface-1);stroke-width:2;transition:opacity .12s}
+.bub:hover{stroke:var(--text-primary)}
+.bub.sel{stroke:var(--text-primary);stroke-width:2.5}
+.lbl{font-size:9.5px;fill:var(--text-secondary);pointer-events:none}
+
+/* charts */
+.gridline{stroke:var(--grid);stroke-width:1}
+.axisline{stroke:var(--axis);stroke-width:1}
+.tick{font-size:10.5px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.serie{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+.dot{fill:var(--accent);stroke:var(--surface-1);stroke-width:2}
+.refline{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.reflbl{font-size:10px;fill:var(--muted)}
+.bar{cursor:pointer}
+.barlbl{font-size:11px;fill:var(--text-secondary)}
+.barval{font-size:11px;fill:var(--text-secondary);font-variant-numeric:tabular-nums}
+.bar.sel .barlbl,.bar.sel .barval{fill:var(--text-primary);font-weight:600}
+
+/* legend */
+.legend{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.ramp{display:flex;border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.ramp i{width:26px;height:11px;display:block}
+
+/* tooltip */
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;z-index:20;
+     background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:8px 10px;
+     font-size:12.5px;box-shadow:0 6px 18px rgba(0,0,0,.16);max-width:230px}
+#tip b{display:block;margin-bottom:3px;font-size:13px}
+#tip span{color:var(--text-secondary);font-variant-numeric:tabular-nums}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+   font-weight:500;padding:0 8px 8px 0;border-bottom:1px solid var(--axis)}
+td{padding:8px 8px 8px 0;border-bottom:1px solid var(--grid);color:var(--text-secondary)}
+td:first-child{color:var(--text-primary)}
+tr.sel td{background:var(--plane)}
+details summary{cursor:pointer;font-size:13px;color:var(--accent);padding:4px 0}
+
+.caveat{border-left:2px solid var(--critical);padding:2px 0 2px 13px;margin-top:16px;
+        font-size:13px;color:var(--text-secondary)}
+.caveat b{color:var(--text-primary)}
+footer{margin-top:26px;padding-top:16px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted)}
+a{color:var(--accent)}
+</style>
+</head>
+<body class="viz-root">
+<div class="wrap">
+
+<header>
+  <h1>Night-time electricity availability, city by city</h1>
+  <p class="sub">How much of each city’s <b>normally lit area</b> falls dark, measured against that city’s own history from VIIRS satellite passes. Never against other cities, because that would just map wealth.</p>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>How much of each city goes dark</h2>
+    <p class="sub" style="font-size:12.5px">Circle size is how bright the city normally is. Colour is how much of its lit area typically goes dark. Click any city.</p>
+    <svg id="map" viewBox="0 0 620 560" role="img" aria-label="Map of African cities coloured by dimming"></svg>
+    <div class="legend">
+      <span>Less of the city goes dark</span>
+      <span class="ramp" id="ramp"></span>
+      <span>More of it goes dark</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="selName">—</h2>
+    <p class="sub" style="font-size:12.5px" id="selSub">&nbsp;</p>
+    <div class="tiles" id="tiles"></div>
+    <h2 style="margin-top:4px">Share of the city dark, by night</h2>
+    <p class="sub" style="font-size:12.5px">Each observation night. Dashed line is this city's average.</p>
+    <svg id="ts" viewBox="0 0 420 210" role="img" aria-label="Brightness over time for the selected city"></svg>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Every city, ranked by how much of it goes dark</h2>
+  <p class="sub" style="font-size:12.5px">Share of the city's normally lit area sitting below half its usual level, averaged over all observations. Higher means more of the city goes dark.</p>
+  <svg id="rank" viewBox="0 0 900 640" role="img" aria-label="Cities ranked by mean share of own baseline"></svg>
+</div>
+
+<div class="card">
+  <details>
+    <summary>Show the numbers as a table</summary>
+    <table id="tbl"><thead><tr>
+      <th>City</th><th>Country</th><th>Normal</th><th>Typically dark</th><th>Worst night</th><th>Obs</th>
+    </tr></thead><tbody></tbody></table>
+  </details>
+</div>
+
+<div class="caveat">
+  <b>Read this before drawing conclusions. Nothing here is a finding yet.</b>
+  Observations are sampled near new moon so lunar brightening is controlled, and nights with poor coverage are discarded. But <b>thin cloud is not corrected for</b>, and thin cloud dims a city in exactly the way a partial outage does. A single low night is more likely weather than a blackout. Read the ranking, not any individual number.
+  <br><br>
+  <b>Known bias.</b> Generators and rooftop solar dim less during an outage and they track wealth, so this systematically under-detects outages in richer areas and richer countries.
+  <br><br>
+  <b>What the number means.</b> The share of a city's normally lit area sitting below half its own usual brightness. Because "usual" is set at the 90th percentile of that city's own nights, a typical night sits below it by construction, so the absolute level runs high for everyone. The comparison between cities is the informative part, not the level.
+</div>
+
+<footer>
+  Data VIIRS Day-Night Band via the World Bank Light Every Night archive, public domain, no account required.
+  Code <a href="https://github.com/PeterTheDataScientist/grid-atlas">Apache 2.0</a>, derived data CC BY 4.0.
+  Built by <a href="https://petermundowa.com">Peter Tinashe Mundowa</a> in Harare.
+</footer>
+</div>
+<div id="tip" role="status"></div>
+
+<script>
+const DATA = __DATA__;
+const AFRICA = __AFRICA__;
+const P = DATA.places;
+
+// Sequential ramp: encodes DIMMING (1 - mean share). More dimming, darker step.
+const RAMP = ["--s100","--s250","--s400","--s450","--s550","--s650","--s700"];
+const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+const dimOf = d => d.mean_dark_share;
+const lo = Math.min(...P.map(dimOf)), hi = Math.max(...P.map(dimOf));
+const rampIdx = d => Math.min(RAMP.length-1,
+  Math.max(0, Math.round((dimOf(d)-lo)/((hi-lo)||1)*(RAMP.length-1))));
+const colOf = d => cssv(RAMP[rampIdx(d)]);
+
+document.getElementById("ramp").innerHTML =
+  RAMP.map(v=>`<i style="background:var(${v})"></i>`).join("");
+
+// ---- projection (equirectangular, Africa window) ----
+const MW=620, MH=560, W=-19, E=53, S=-36, N=39;
+const px = lon => (lon-W)/(E-W)*MW;
+const py = lat => (N-lat)/(N-S)*MH;
+
+const tip = document.getElementById("tip");
+const showTip = (e, html) => {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(e.clientX+14, innerWidth-r.width-10) + "px";
+  tip.style.top  = Math.min(e.clientY+14, innerHeight-r.height-10) + "px";
+};
+const hideTip = () => tip.style.opacity = 0;
+
+let selected = P.find(d => d.city === "Harare") || P[0];
+
+// ---- map ----
+function drawMap(){
+  const rMax = Math.max(...P.map(d=>d.normal_radiance));
+  const r = d => 4 + 13*Math.sqrt(d.normal_radiance/rMax);
+  const land = AFRICA.map(p=>{
+    const conv = p.replace(/M|Z/g,"").split("L").map(s=>{
+      const [x,y]=s.split(","); return px(+x).toFixed(1)+","+py(+y).toFixed(1);
+    }).join("L");
+    return `<path class="land" d="M${conv}Z"/>`;
+  }).join("");
+
+  const bubbles = P.map((d,i)=>`<circle class="bub${d===selected?' sel':''}" data-i="${i}"
+     cx="${px(d.lon).toFixed(1)}" cy="${py(d.lat).toFixed(1)}" r="${r(d).toFixed(1)}"
+     fill="${colOf(d)}"><title>${d.city}</title></circle>`).join("");
+
+  document.getElementById("map").innerHTML = land + bubbles;
+
+  document.querySelectorAll("#map .bub").forEach(el=>{
+    const d = P[+el.dataset.i];
+    el.addEventListener("mousemove", e => showTip(e,
+      `<b>${d.city}</b><span>${d.country}<br>
+       Normally lit area ${d.lit_pixels.toLocaleString()} pixels<br>
+       <b style="display:inline">${Math.round(d.mean_dark_share*100)}%</b> of it typically dark</span>`));
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("click", ()=>select(d));
+  });
+}
+
+// ---- time series ----
+function drawTS(d){
+  const w=420,h=210,ml=44,mr=12,mt=12,mb=28;
+  const iw=w-ml-mr, ih=h-mt-mb;
+  const vals=d.series.map(s=>s.dark_share);
+  const ymax=Math.min(1, Math.max(0.25, ...vals)*1.12);  // the metric is a share, it cannot exceed 1
+  const X=i=>ml+(d.series.length<2?iw/2:i/(d.series.length-1)*iw);
+  const Y=v=>mt+ih-(v/ymax)*ih;
+
+  let g="";
+  for(let k=0;k<=4;k++){
+    const v=ymax*k/4, y=Y(v);
+    g+=`<line class="gridline" x1="${ml}" y1="${y.toFixed(1)}" x2="${w-mr}" y2="${y.toFixed(1)}"/>
+        <text class="tick" x="${ml-7}" y="${(y+3.5).toFixed(1)}" text-anchor="end">${Math.round(v*100)}%</text>`;
+  }
+  const by=Y(d.mean_dark_share);
+  g+=`<line class="refline" x1="${ml}" y1="${by.toFixed(1)}" x2="${w-mr}" y2="${by.toFixed(1)}"/>
+      <text class="reflbl" x="${w-mr}" y="${(by-5).toFixed(1)}" text-anchor="end">its average</text>`;
+
+  const path=d.series.map((s,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(s.dark_share).toFixed(1)}`).join("");
+  g+=`<path class="serie" d="${path}"/>`;
+  d.series.forEach((s,i)=>{
+    g+=`<circle class="dot tsdot" data-k="${i}" cx="${X(i).toFixed(1)}" cy="${Y(s.dark_share).toFixed(1)}" r="4.5"/>`;
+    if(i%2===0||i===d.series.length-1)
+      g+=`<text class="tick" x="${X(i).toFixed(1)}" y="${h-9}" text-anchor="middle">${s.date.slice(2,4)}/${s.date.slice(4,6)}</text>`;
+  });
+  g+=`<line class="axisline" x1="${ml}" y1="${mt+ih}" x2="${w-mr}" y2="${mt+ih}"/>`;
+  document.getElementById("ts").innerHTML=g;
+
+  document.querySelectorAll(".tsdot").forEach(el=>{
+    const s=d.series[+el.dataset.k];
+    el.addEventListener("mousemove",e=>showTip(e,
+      `<b>${s.date.slice(0,4)}-${s.date.slice(4,6)}-${s.date.slice(6)}</b>
+       <span><b style="display:inline">${Math.round(s.dark_share*100)}%</b> of lit area dark<br>
+       mean ${s.mean_radiance.toFixed(1)} nW/cm²/sr<br>
+       ${Math.round(s.coverage*100)}% coverage · moon ${s.moon<0.1||s.moon>0.9?"new":s.moon.toFixed(2)}</span>`));
+    el.addEventListener("mouseleave",hideTip);
+  });
+}
+
+// ---- ranking ----
+function drawRank(){
+  const w=900,ml=178,mr=54,rowH=22,top=16;
+  const rows=[...P].sort((a,b)=>b.mean_dark_share-a.mean_dark_share);
+  const iw=w-ml-mr, h=top+rows.length*rowH+10;
+  document.getElementById("rank").setAttribute("viewBox",`0 0 ${w} ${h}`);
+  let g="";
+  for(let k=0;k<=5;k++){
+    const x=ml+iw*k/5;
+    g+=`<line class="gridline" x1="${x}" y1="${top}" x2="${x}" y2="${top+rows.length*rowH}"/>
+        <text class="tick" x="${x}" y="${top-5}" text-anchor="middle">${k*20}%</text>`;
+  }
+  rows.forEach((d,i)=>{
+    const y=top+i*rowH, bw=iw*d.mean_dark_share;
+    g+=`<g class="bar${d===selected?' sel':''}" data-i="${P.indexOf(d)}">
+      <rect x="0" y="${y}" width="${w}" height="${rowH}" fill="transparent"/>
+      <text class="barlbl" x="${ml-9}" y="${y+rowH/2+4}" text-anchor="end">${d.city}</text>
+      <rect x="${ml}" y="${y+4}" width="${Math.max(2,bw).toFixed(1)}" height="${rowH-9}"
+            rx="3" fill="${colOf(d)}"/>
+      <text class="barval" x="${ml+bw+7}" y="${y+rowH/2+4}">${Math.round(d.mean_dark_share*100)}%</text>
+    </g>`;
+  });
+  document.getElementById("rank").innerHTML=g;
+  document.querySelectorAll("#rank .bar").forEach(el=>{
+    const d=P[+el.dataset.i];
+    el.addEventListener("mousemove",e=>showTip(e,
+      `<b>${d.city}</b><span>${d.country}<br>
+       ${Math.round(d.mean_dark_share*100)}% of its lit area dark on a typical night<br>
+       Worst night ${Math.round(d.worst_dark_share*100)}%</span>`));
+    el.addEventListener("mouseleave",hideTip);
+    el.addEventListener("click",()=>select(d));
+  });
+}
+
+// ---- table ----
+function drawTable(){
+  document.querySelector("#tbl tbody").innerHTML=[...P]
+    .sort((a,b)=>b.mean_dark_share-a.mean_dark_share).map(d=>
+    `<tr class="${d===selected?'sel':''}"><td>${d.city}</td><td>${d.country}</td>
+     <td>${d.normal_radiance.toFixed(1)}</td><td>${Math.round(d.mean_dark_share*100)}%</td>
+     <td>${Math.round(d.worst_dark_share*100)}%</td><td>${d.n}</td></tr>`).join("");
+}
+
+function select(d){
+  selected=d;
+  document.getElementById("selName").textContent=`${d.city}, ${d.country}`;
+  document.getElementById("selSub").textContent=
+    `${d.lit_pixels.toLocaleString()} lit pixels, normally ${d.normal_radiance.toFixed(1)} nW/cm²/sr. ${d.n} observations.`;
+  document.getElementById("tiles").innerHTML=`
+    <div class="tile"><b>${Math.round(d.mean_dark_share*100)}%</b><span>of its lit area dark on a typical night</span></div>
+    <div class="tile"><b>${Math.round(d.worst_dark_share*100)}%</b><span>worst single night</span></div>
+    <div class="tile"><b>${Math.round(d.mean_lit_share*100)}%</b><span>average brightness vs its own normal</span></div>`;
+  drawTS(d); drawMap(); drawRank(); drawTable();
+}
+
+drawMap(); drawRank(); drawTable(); select(selected);
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{
+  drawMap(); drawRank(); drawTS(selected);
+});
+</script>
+</body>
+</html>

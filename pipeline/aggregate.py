@@ -42,7 +42,36 @@ def lunar_phase(d: str) -> float:
     return round((((date(y, m, dd) - _REF).days) % _SYN) / _SYN, 3)
 
 
-def build(pixels_path: str, places_path: str, out_path: str) -> None:
+# A run whose pixel store is incomplete must not be allowed to overwrite a fuller
+# published series. The pixel arrays live in the Actions cache, and a cache
+# eviction leaves the next run with only the dates in its current window, which
+# is fewer nights than the archive holds. Publishing that quietly is the same
+# error as recording a network failure as an absence: a thin cache is not
+# evidence that fewer nights exist.
+#
+# This actually happened. See FAILURES.md.
+SHRINK_TOLERANCE = 0.9
+
+
+class SeriesShrank(RuntimeError):
+    """The new aggregation covers materially fewer nights than the published one."""
+
+
+def _published_total(out_path: str) -> int:
+    """Observations in the file about to be overwritten, or 0 if there is none."""
+    path = Path(out_path)
+    if not path.exists():
+        return 0
+    try:
+        d = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return 0
+    return sum(len(p.get("series") or []) for p in d.get("places", []))
+
+
+def build(
+    pixels_path: str, places_path: str, out_path: str, allow_shrink: bool = False
+) -> None:
     places = json.load(open(places_path))
     with np.load(pixels_path) as z:
         keys = list(z.files)
@@ -116,9 +145,24 @@ def build(pixels_path: str, places_path: str, out_path: str) -> None:
                    "lit_rel": LIT_REL, "dark_at": DARK_AT},
         "places": out,
     }
+    total = sum(p["n"] for p in out)
+    published = _published_total(out_path)
+    if published and total < published * SHRINK_TOLERANCE and not allow_shrink:
+        raise SeriesShrank(
+            f"refusing to publish {total} observations over the {published} already "
+            f"on file. The pixel store is incomplete, almost certainly a cache "
+            f"eviction, so re-run with the full archive window. Pass "
+            f"allow_shrink=True only when the reduction is deliberate."
+        )
+
     Path(out_path).write_text(json.dumps(payload, indent=1))
-    print(f"{len(out)} cities, {sum(p['n'] for p in out)} observations -> {out_path}")
+    print(f"{len(out)} cities, {total} observations -> {out_path}")
 
 
 if __name__ == "__main__":
-    build(sys.argv[1], sys.argv[2], sys.argv[3])
+    build(
+        sys.argv[1],
+        sys.argv[2],
+        sys.argv[3],
+        allow_shrink="--allow-shrink" in sys.argv,
+    )

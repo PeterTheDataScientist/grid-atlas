@@ -2,7 +2,7 @@
 
 **Where can you site a factory, a cold store, a data centre or a base station and know what the power will actually do? This measures night-time electricity availability for African cities, each against its own history, from twelve years of satellite imagery.**
 
-**[Open the dashboard](https://peterthedatascientist.github.io/gridtruth/)**
+**[Open the dashboard](https://peterthedatascientist.github.io/grid-atlas/)**
 
 [![License: Apache 2.0](https://img.shields.io/badge/code-Apache%202.0-blue.svg)](LICENSE)
 [![Data: CC BY 4.0](https://img.shields.io/badge/data-CC%20BY%204.0-green.svg)](data/LICENSE)
